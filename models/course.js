@@ -7,9 +7,19 @@ module.exports = (sequelize, DataTypes) => {
     },
     title: DataTypes.STRING,
     description: DataTypes.TEXT,
-    estimatedTime: DataTypes.STRING,
-    materialsNeeded: DataTypes.STRING
+
+    estimatedTime: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+
+    materialsNeeded: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
   }, {});
+  
+  //Relationship between the Courses and Users tables is defined (linking tables)
   Course.associate = function(models) {
     Course.belongsTo(models.User); //auto-generate userId in Course linking to User model
   };

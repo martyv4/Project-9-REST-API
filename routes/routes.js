@@ -4,6 +4,34 @@ const app = express();
 
 const Sequelize = require('sequelize');
 
+app.get('/api/users', (req, res) => {
+    res.return(200);
+});
+
+app.post('/api/users', (req, res) => {
+    res.return(201);
+});
+
+app.get('/api/courses', (req, res) => {
+    res.return(200);
+});
+
+app.get('/api/courses/:id', (req, res) => {
+    res.return(200);
+});
+
+app.post('/api/courses', (req, res) => {
+    res.return(201);
+});
+
+app.post('/api/courses/:id', (req, res) => {
+    res.return(204);
+});
+
+app.delete('/api/courses/:id', (req, res) => {
+    res.return(204);
+});
+
 // setup a friendly greeting for the root route
 app.get('/', (req, res) => {
     const sql = new Sequelize({
