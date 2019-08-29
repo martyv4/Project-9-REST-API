@@ -1,0 +1,17 @@
+'use strict';
+module.exports = (sequelize, DataTypes) => {
+  const User = sequelize.define('User', {
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true
+    },
+    firstName: DataTypes.STRING,
+    lastName: DataTypes.STRING,
+    emailAddress: DataTypes.STRING,
+    password: DataTypes.STRING
+  }, {});
+  User.associate = function(models) {
+    User.hasMany(models.Course); //grants access to user.getCourses()
+  };
+  return User;
+};
