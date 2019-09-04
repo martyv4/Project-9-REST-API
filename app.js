@@ -14,7 +14,6 @@ const enableGlobalErrorLogging = process.env.ENABLE_GLOBAL_ERROR_LOGGING === 'tr
 app.use(morgan('dev'));
 
 
-
 // set our port
 app.set('port', process.env.PORT || 5000);
 
