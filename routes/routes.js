@@ -20,6 +20,17 @@ const auth = require('basic-auth');
 //Sequelize DB object typical way to get Sequelize DB object
 app.set('models', require('../models'));
 
+const attributesCourse = ['id', 'title', 'description', 'estimatedTime', 'materialsNeeded'];
+const attributesUser = ['id', 'firstName', 'lastName', 'emailAddress'];
+
+//Validation of email address validity
+const validationEmailInput = (str) => {
+//Validate the e-mail field if false then give an error message
+  //https://stackoverflow.com/questions/46155/how-to-validate-an-email-address-in-javascript
+  const re = /^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i;
+  return re.test(str)
+}
+
 //AUTHENTICATION MIDDLEWARE
 const authenticateUser = async (req, res, next) => {
   let message = null;
@@ -91,7 +102,7 @@ app.get('/api/users', authenticateUser, (req, res, next) => {
   //Send a POST request to /api/users to create a user
   //Returns HTTP: Status Code 201 means Created
   //in the event of a validation error returns a 400 error means Bad Request
-app.post('/api/users', (req, res, next) => {
+app.post('/api/users', async (req, res, next) => {
   const user = req.body;
 
     const errors = [];
@@ -116,24 +127,46 @@ app.post('/api/users', (req, res, next) => {
     }
     else
     {
-      user.password = bcrypt.hashSync(user.password, 8);
-      const User = app.get('models').User;
+      if (!await validationEmailInput(user.emailAddress))
+      {
+        res.status(400);
+        res.json({"message": "Parameter emailAddress is not a valid email address."});
+      }
+      else
+      {
+        const User = app.get('models').User;
 
-      User.create(user)
-      .then(() => {
-        res.set('Location', "/");
-        res.status(201);
-        res.send();
-    })
-    .catch((err) => {
-      next(new Error(err));
-    });
+        const checkUser = await User.findOne({
+          where: {emailAddress: user.emailAddress}
+        })
+
+        if (!checkUser)
+        {
+          user.password = await bcrypt.hashSync(user.password, 8);
+          try
+          {
+            await User.create(user);
+            res.set('Location', "/");
+            res.status(201);
+            res.send();
+          }
+          catch (err) {
+            next(new Error(err));
+          }
+        }
+        else
+        {
+          res.status(400);
+          res.json({"message": "Given emailAddress already in use."});
+        }
+    }
   }
 });
 
 //COURSE ROUTES
   //Send a GET request to /api/courses to list courses
   //Returns HTTP: Status Code 200 means OK
+  //https://stackoverflow.com/questions/21883484/how-to-use-an-include-with-attributes-with-sequelize
 app.get('/api/courses', (req, res, next) => {
 
   const Course = app.get('models').Course;
@@ -143,8 +176,9 @@ app.get('/api/courses', (req, res, next) => {
     order: [
         ['title', 'ASC'],
     ],
+    attributes: attributesCourse,
     include: [
-      { model: User, as: 'user' }
+      { model: User, as: 'user', attributes: attributesUser }
     ]
   })
   .then((courseList) => {
@@ -211,7 +245,7 @@ app.post('/api/courses', authenticateUser, (req, res, next) => {
     //set HTTP header to the URI for the course
     const Course = app.get('models').Course;
 
-    course.user = req.currentUser;
+    course.userId = req.currentUser.id;
 
     Course.create(course)
     .then((course) => {
@@ -255,19 +289,40 @@ app.put('/api/courses/:id', authenticateUser, (req, res, next) => {
 
   //Update the course at ID :id
 
+    Course.findByPk(req.params.id)
+    .then((foundCourse) => {
+      if (!foundCourse)
+      {
+        res.status(400);
+        res.json({ "message": "Course not found for ID " + req.params.id});
+      }
+      else
+      {
+        if (foundCourse.userId === req.currentUser.id)
+        {
+            Course.update(req.body,
+            {
+              where: {id: req.params.id}
+            })
+            .then(() => {
+              res.status(204);
+              res.send();
+            })
+            .catch((err) => {
+              next(new Error(err));
+            });
+        }
+        else
+        {
+          res.status(400);
+          res.json({ "message": "Course does not belong to currently authenticated user."})
+        }
+      }
+    })
+
   //TODO: check if ID exists, exception if not
 
-    Course.update(req.body,
-    {
-      where: {id: req.params.id}
-    })
-    .then(() => {
-      res.status(204);
-      res.send();
-    })
-    .catch((err) => {
-      next(new Error(err));
-    });
+    
   }
 });
 
@@ -282,15 +337,24 @@ app.delete('/api/courses/:id', authenticateUser, (req, res, next) => {
     Course.findByPk(req.params.id).then((foundCourse) => {
       if (foundCourse)
       {
-        Course.destroy({
-          where: {id: req.params.id}
-        }).then(() => {
-          res.status(204);
-          res.send();
-        })
-        .catch((err) => {
-          next(new Error(err));
-        });
+
+        if (foundCourse.userId === req.currentUser.id)
+        {
+          Course.destroy({
+            where: {id: req.params.id}
+          }).then(() => {
+            res.status(204);
+            res.send();
+          })
+          .catch((err) => {
+            next(new Error(err));
+          });
+        }
+        else
+        {
+          res.status(400);
+          res.json({ "message": "Course does not belong to currently authenticated user."})
+        }
       }
       else
       {
