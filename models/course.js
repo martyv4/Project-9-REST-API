@@ -1,4 +1,5 @@
 'use strict';
+//Sequelize Model
 module.exports = (sequelize, DataTypes) => {
   const Course = sequelize.define('Course', {
     id: {

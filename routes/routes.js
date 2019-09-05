@@ -15,15 +15,75 @@ app.use(bodyParser.json());
 //load bcryptjs package to encrypt and decrypt password values
 const bcrypt = require('bcryptjs');
 
+const auth = require('basic-auth');
+
 //Sequelize DB object typical way to get Sequelize DB object
 app.set('models', require('../models'));
+
+//AUTHENTICATION MIDDLEWARE
+const authenticateUser = async (req, res, next) => {
+  let message = null;
+
+  // Parse the user's credentials from the Authorization header.
+  const credentials = auth(req);
+
+  // If the user's credentials are available...
+  if (credentials) {
+    // Attempt to retrieve the user from the data store
+    // by their username (i.e. the user's "key"
+    // from the Authorization header).
+    const User = app.get('models').User;
+
+    //const user = User.find(u => u.emailAddress === credentials.emailAddress);
+    const user = await User.findOne({
+      where: {emailAddress: credentials.name}
+    });
+
+    if (user) {
+      // Use the bcryptjs npm package to compare the user's password
+      // (from the Authorization header) to the user's password
+      // that was retrieved from the data store.
+      const authenticated = await bcrypt.compareSync(credentials.pass, user.password);
+
+      // If the passwords match...
+      if (authenticated) {
+        console.log(`Authentication successful for emailAddress: ${user.emailAddress}`);
+
+        // Then store the retrieved user object on the request object
+        // so any middleware functions that follow this middleware function
+        // will have access to the user's information.
+        req.currentUser = user;
+      } else {
+        message = `Authentication failure for username: ${user.emailAddress}`;
+      }
+    } else {
+      message = `User not found for username: ${credentials.name}`;
+    }
+  } 
+  else {
+    message = 'Auth header not found';
+  }
+   
+  // If user authentication failed...
+  if (message) {
+    console.warn(message);
+
+    // Return a response with a 401 Unauthorized HTTP status code.
+    res.status(401).json({ message: 'Access Denied' });
+  } else {
+    // Or if user authentication succeeded...
+    // Call the next() method.
+    next();
+  }
+};
 
 //USER ROUTES
   //Send a GET request to /api/users to show users
   //Returns HTTP: Status Code 200 means OK
-app.get('/api/users', (req, res) => {
+  //Authentication
+app.get('/api/users', authenticateUser, (req, res, next) => {
     res.status(200);
-    res.json('{}');
+    res.json(req.currentUser);
     //res.json(data);
 });
 
@@ -74,7 +134,7 @@ app.post('/api/users', (req, res, next) => {
 //COURSE ROUTES
   //Send a GET request to /api/courses to list courses
   //Returns HTTP: Status Code 200 means OK
-app.get('/api/courses', (req, res) => {
+app.get('/api/courses', (req, res, next) => {
 
   const Course = app.get('models').Course;
   const User = app.get('models').User;
@@ -96,7 +156,7 @@ app.get('/api/courses', (req, res) => {
 //COURSE ROUTES
   //Send a GET request to /api/courses/:id to show course
   //Returns HTTP: Status Code 200 means OK  
-app.get('/api/courses/:id', (req, res) => {
+app.get('/api/courses/:id', (req, res, next) => {
       const Course = app.get('models').Course;
       const User = app.get('models').User;
       Course.findByPk(req.params.id, {
@@ -127,7 +187,8 @@ app.get('/api/courses/:id', (req, res) => {
 //COURSE ROUTES
   //Send a POST request to /api/courses to create courses
   //Returns HTTP: Status Code 201 means Created
-app.post('/api/courses', (req, res, next) => {
+  //Authentication
+app.post('/api/courses', authenticateUser, (req, res, next) => {
   const course = req.body;
 
   const errors = [];
@@ -150,6 +211,8 @@ app.post('/api/courses', (req, res, next) => {
     //set HTTP header to the URI for the course
     const Course = app.get('models').Course;
 
+    course.user = req.currentUser;
+
     Course.create(course)
     .then((course) => {
       const fullUrl = req.protocol + '://' + req.get('host') + "/api/course/" + course.id;
@@ -168,8 +231,8 @@ app.post('/api/courses', (req, res, next) => {
 //COURSE ROUTES
   //Send a PUT request to /api/courses/:id to update courses
   //Returns HTTP: Status Code 204 means No Content
-  
-app.put('/api/courses/:id', (req, res) => {
+  //Authentication
+app.put('/api/courses/:id', authenticateUser, (req, res, next) => {
   const course = req.body;
 
   const errors = [];
@@ -210,7 +273,8 @@ app.put('/api/courses/:id', (req, res) => {
 
 //COURSE ROUTES
   //Send a DELETE request to /api/courses/:id to delete courses
-app.delete('/api/courses/:id', (req, res) => {
+  //Authentication  
+app.delete('/api/courses/:id', authenticateUser, (req, res, next) => {
     //delete the course at ID :id - check if it exists first
     const Course = app.get('models').Course;
 
