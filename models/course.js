@@ -7,8 +7,30 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true,
       primaryKey: true
     },
-    title: DataTypes.STRING,
-    description: DataTypes.TEXT,
+    title: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: { 
+        notEmpty: {
+          msg: "title cannot be empty."
+        },
+        notNull: {
+          msg: "title must be in the request."
+        },
+      },
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+      validate: { 
+        notEmpty: {
+          msg: "description cannot be empty."
+        },
+        notNull: {
+          msg: "description must be in the request."
+        },
+      },
+    },
 
     estimatedTime: {
       type: DataTypes.STRING,

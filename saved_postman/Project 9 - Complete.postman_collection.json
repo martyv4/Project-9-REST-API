@@ -1,0 +1,252 @@
+{
+	"info": {
+		"_postman_id": "b152ecad-020f-4c71-b4aa-66ec6b4d0a10",
+		"name": "Project 9 - Complete",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "http://localhost:5000/api/users",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "johnpassword",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "john@smith.com",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/api/users",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"users"
+					]
+				},
+				"description": "Get currently authenticated user"
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:5000/api/users",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"firstName\": \"J\",\r\n  \"lastName\": \"Smith\",\r\n  \"emailAddress\": \"johnsmith.com\",\r\n  \"password\": \"johnpassword\"\r\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/users",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"users"
+					]
+				},
+				"description": "POST user - create new user and return details"
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:5000/api/courses",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/api/courses",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"courses"
+					]
+				},
+				"description": "GET list of courses"
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:5000/api/courses/4",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/api/courses/4",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"courses",
+						"4"
+					]
+				},
+				"description": "Get a particular course by ID (example 4)"
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:5000/api/courses",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "johnpassword",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "john@smith.com",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"title\": \"JavaScript 201\",\r\n  \"description\": \"More Coding\",\r\n  \"estimatedTime\": \"100 minutes\",\r\n  \"materialsNeeded\": \"Glue and Nails\"\r\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/courses",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"courses"
+					]
+				},
+				"description": "POST course - create new course"
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:5000/api/courses/1",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "johnpassword",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "john@smith.com",
+							"type": "string"
+						}
+					]
+				},
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Content-Type",
+						"name": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"title\": \"JavaScript Fun 2\",\r\n  \"description\": \"Coding 2\"\r\n}"
+				},
+				"url": {
+					"raw": "http://localhost:5000/api/courses/1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"courses",
+						"1"
+					]
+				},
+				"description": "Update course by id (example 1)"
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:5000/api/courses/5",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": [
+						{
+							"key": "password",
+							"value": "johnpassword",
+							"type": "string"
+						},
+						{
+							"key": "username",
+							"value": "john@smith.com",
+							"type": "string"
+						}
+					]
+				},
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:5000/api/courses/5",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5000",
+					"path": [
+						"api",
+						"courses",
+						"5"
+					]
+				},
+				"description": "Delete this course (example 5)"
+			},
+			"response": []
+		}
+	]
+}

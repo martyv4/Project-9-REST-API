@@ -12,6 +12,7 @@ const { check, validationResult } = require('express-validator');
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 
+
 //load bcryptjs package to encrypt and decrypt password values
 const bcrypt = require('bcryptjs');
 
@@ -102,17 +103,21 @@ app.get('/api/users', authenticateUser, (req, res, next) => {
   //Send a POST request to /api/users to create a user
   //Returns HTTP: Status Code 201 means Created
   //in the event of a validation error returns a 400 error means Bad Request
-app.post('/api/users', async (req, res, next) => {
+app.post('/api/users', (req, res, next) => {
   const user = req.body;
+
+  //Use input validators for emailAddress and password, then use Sequelize validation for the entire model User
 
     const errors = [];
 
+    /*
     if (!user.firstName) {
       errors.push('Please provide a value for "firstName"');
     }
     if (!user.lastName) {
       errors.push('Please provide a value for "lastName"');
     }
+    */
     if (!user.emailAddress) {
       errors.push('Please provide a value for "emailAddress"');
     }
@@ -123,11 +128,11 @@ app.post('/api/users', async (req, res, next) => {
     if (errors.length != 0)
     {
       res.status(400);
-      res.json(errors);
+      res.json({"messages" : errors});
     }
     else
     {
-      if (!await validationEmailInput(user.emailAddress))
+      if (!validationEmailInput(user.emailAddress))
       {
         res.status(400);
         res.json({"message": "Parameter emailAddress is not a valid email address."});
@@ -136,29 +141,39 @@ app.post('/api/users', async (req, res, next) => {
       {
         const User = app.get('models').User;
 
-        const checkUser = await User.findOne({
+        User.findOne({
           where: {emailAddress: user.emailAddress}
         })
-
+        .then((checkUser) => {
         if (!checkUser)
         {
-          user.password = await bcrypt.hashSync(user.password, 8);
-          try
-          {
-            await User.create(user);
-            res.set('Location', "/");
-            res.status(201);
-            res.send();
-          }
-          catch (err) {
-            next(new Error(err));
-          }
+          user.password = bcrypt.hashSync(user.password, 8);
+            User.create(user)
+            .then(() => {
+              res.set('Location', "/");
+              res.status(201);
+              res.send();
+            })
+            .catch((err) => {
+              if (err.name === "SequelizeValidationError") {
+                res.status(400);
+                res.json(err);
+              }
+              else
+              {
+                throw err;
+              }
+            })
+            .catch((err) => {
+              next(new Error(err));
+            });;
         }
         else
         {
           res.status(400);
           res.json({"message": "Given emailAddress already in use."});
         }
+        });
     }
   }
 });
@@ -194,8 +209,9 @@ app.get('/api/courses/:id', (req, res, next) => {
       const Course = app.get('models').Course;
       const User = app.get('models').User;
       Course.findByPk(req.params.id, {
+        attributes: attributesCourse,
         include: [
-          { model: User, as: 'user' }
+          { model: User, as: 'user', attributes: attributesUser }
         ]
       }
       ).then((foundCourse) => {
