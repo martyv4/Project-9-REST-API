@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "nodemon ./app.js",
+    "test": "mocha",
     "seed": "cross-env DB_ENABLE_LOGGING=true node './seed'"
   },
   "keywords": [],
@@ -12,6 +13,7 @@
   "license": "ISC",
   "devDependencies": {
     "chai": "^4.2.0",
+    "mocha": "^6.2.0",
     "nodemon": "^1.18.3"
   },
   "dependencies": {
@@ -23,6 +25,7 @@
     "express-validator": "^6.1.1",
     "morgan": "^1.9.0",
     "promise.prototype.finally": "^3.1.0",
+    "request": "^2.88.0",
     "sequelize": "^5.16.0",
     "sequelize-cli": "^5.5.0",
     "sqlite3": "^4.0.2"
