@@ -359,7 +359,7 @@ app.put('/api/courses/:id', authenticateUser, (req, res, next) => {
         }
         else
         {
-          res.status(400);
+          res.status(403);
           res.json({ "message": "Course does not belong to currently authenticated user."})
         }
       }
@@ -397,7 +397,7 @@ app.delete('/api/courses/:id', authenticateUser, (req, res, next) => {
         }
         else
         {
-          res.status(400);
+          res.status(403);
           res.json({ "message": "Course does not belong to currently authenticated user."})
         }
       }
