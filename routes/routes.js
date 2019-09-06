@@ -4,23 +4,23 @@ const app = express();
 
 const Sequelize = require('sequelize');
 
+//controls whether it writes any error message to the console
 const enableGlobalErrorLogging = false;
 
-const { check, validationResult } = require('express-validator');
-
-//Body-parser
+//Body-parser:  informs the application what format http request bodys will contain, in our case everything is JSON
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
-
 
 //load bcryptjs package to encrypt and decrypt password values
 const bcrypt = require('bcryptjs');
 
+//allows receipt of authentication header in http request
 const auth = require('basic-auth');
 
 //Sequelize DB object typical way to get Sequelize DB object
 app.set('models', require('../models'));
 
+//used in /api/courses and /api/courses/:id to reduce displayed attributes from User and Course models
 const attributesCourse = ['id', 'title', 'description', 'estimatedTime', 'materialsNeeded'];
 const attributesUser = ['id', 'firstName', 'lastName', 'emailAddress'];
 
@@ -33,61 +33,68 @@ const validationEmailInput = (str) => {
 }
 
 //AUTHENTICATION MIDDLEWARE
-const authenticateUser = async (req, res, next) => {
+//modified from example in
+//https://teamtreehouse.com/library/rest-api-authentication-with-express
+const authenticateUser = (req, res, next) => {
   let message = null;
 
   // Parse the user's credentials from the Authorization header.
   const credentials = auth(req);
 
   // If the user's credentials are available...
-  if (credentials) {
+  if (!credentials) {
+    console.warn('Auth header not found');
+    
+    // Return a response with a 401 Unauthorized HTTP status code.
+    res.status(401).json({ message: 'Access Denied' });
+  }
+  else
+  {
     // Attempt to retrieve the user from the data store
     // by their username (i.e. the user's "key"
     // from the Authorization header).
     const User = app.get('models').User;
 
     //const user = User.find(u => u.emailAddress === credentials.emailAddress);
-    const user = await User.findOne({
+    const user = User.findOne({
       where: {emailAddress: credentials.name}
-    });
+    })
+    .then((user) => {
 
-    if (user) {
-      // Use the bcryptjs npm package to compare the user's password
-      // (from the Authorization header) to the user's password
-      // that was retrieved from the data store.
-      const authenticated = await bcrypt.compareSync(credentials.pass, user.password);
+      if (user) {
+        // Use the bcryptjs npm package to compare the user's password
+        // (from the Authorization header) to the user's password
+        // that was retrieved from the data store.
+        const authenticated = bcrypt.compareSync(credentials.pass, user.password);
 
-      // If the passwords match...
-      if (authenticated) {
-        console.log(`Authentication successful for emailAddress: ${user.emailAddress}`);
+        // If the passwords match...
+        if (authenticated) {
+          console.log(`Authentication successful for emailAddress: ${user.emailAddress}`);
 
-        // Then store the retrieved user object on the request object
-        // so any middleware functions that follow this middleware function
-        // will have access to the user's information.
-        req.currentUser = user;
-      } else {
-        message = `Authentication failure for username: ${user.emailAddress}`;
+          // Then store the retrieved user object on the request object
+          // so any middleware functions that follow this middleware function
+          // will have access to the user's information.
+          req.currentUser = user;
+        } else {
+          message = `Authentication failure for username: ${user.emailAddress}`;
+        }
       }
-    } else {
-      message = `User not found for username: ${credentials.name}`;
-    }
+      else {
+        message = `User not found for username: ${credentials.name}`;
+      }
+      if (message) {
+        console.warn(message);
+    
+        // Return a response with a 401 Unauthorized HTTP status code.
+        res.status(401).json({ message: 'Access Denied' });
+      } else {
+        // Or if user authentication succeeded...
+        // Call the next() method.
+        next();
+      }
+    });
   } 
-  else {
-    message = 'Auth header not found';
-  }
-   
-  // If user authentication failed...
-  if (message) {
-    console.warn(message);
-
-    // Return a response with a 401 Unauthorized HTTP status code.
-    res.status(401).json({ message: 'Access Denied' });
-  } else {
-    // Or if user authentication succeeded...
-    // Call the next() method.
-    next();
-  }
-};
+}
 
 //USER ROUTES
   //Send a GET request to /api/users to show users
@@ -96,7 +103,6 @@ const authenticateUser = async (req, res, next) => {
 app.get('/api/users', authenticateUser, (req, res, next) => {
     res.status(200);
     res.json(req.currentUser);
-    //res.json(data);
 });
 
 //USER ROUTES
@@ -107,7 +113,7 @@ app.post('/api/users', (req, res, next) => {
   const user = req.body;
 
   //Use input validators for emailAddress and password, then use Sequelize validation for the entire model User
-
+  
     const errors = [];
 
     /*
@@ -145,34 +151,35 @@ app.post('/api/users', (req, res, next) => {
           where: {emailAddress: user.emailAddress}
         })
         .then((checkUser) => {
-        if (!checkUser)
-        {
-          user.password = bcrypt.hashSync(user.password, 8);
-            User.create(user)
-            .then(() => {
-              res.set('Location', "/");
-              res.status(201);
-              res.send();
-            })
-            .catch((err) => {
-              if (err.name === "SequelizeValidationError") {
-                res.status(400);
-                res.json(err);
-              }
-              else
-              {
-                throw err;
-              }
-            })
-            .catch((err) => {
-              next(new Error(err));
-            });;
-        }
-        else
-        {
-          res.status(400);
-          res.json({"message": "Given emailAddress already in use."});
-        }
+          if (!checkUser)
+          {
+            user.password = bcrypt.hashSync(user.password, 8);
+              User.create(user)
+              .then(() => {
+                res.set('Location', "/");
+                res.status(201);
+                res.send();
+              })
+              .catch((err) => {
+                //https://stackoverflow.com/questions/16507222/create-json-object-dynamically-via-javascript-without-concate-strings
+                if (err.name === "SequelizeValidationError") {
+                  res.status(400);
+                  res.json({ "name": err.name, "message": err.errors[0].message, "type": err.errors[0].type});
+                }
+                else
+                {
+                  throw err;
+                }
+              })
+              .catch((err) => {
+                next(new Error(err));
+              });
+          }
+          else
+          {
+            res.status(400);
+            res.json({"message": "Given emailAddress already in use."});
+          }
         });
     }
   }
@@ -206,32 +213,30 @@ app.get('/api/courses', (req, res, next) => {
   //Send a GET request to /api/courses/:id to show course
   //Returns HTTP: Status Code 200 means OK  
 app.get('/api/courses/:id', (req, res, next) => {
-      const Course = app.get('models').Course;
-      const User = app.get('models').User;
-      Course.findByPk(req.params.id, {
-        attributes: attributesCourse,
-        include: [
-          { model: User, as: 'user', attributes: attributesUser }
-        ]
-      }
-      ).then((foundCourse) => {
-      if (foundCourse)
-      {
-        res.status(200);
-        res.json(foundCourse);
-      }
-      else
-      {
-        //Render 404 if the book at :id is not in the database
-        res.status(404);
-        res.json({ "message": "Course not found for ID " + req.params.id});
-      }
+  const Course = app.get('models').Course;
+  const User = app.get('models').User;
+  Course.findByPk(req.params.id, {
+    attributes: attributesCourse,
+    include: [
+      { model: User, as: 'user', attributes: attributesUser }
+    ]
+  })
+  .then((foundCourse) => {
+    if (foundCourse)
+    {
+      res.status(200);
+      res.json(foundCourse);
+    }
+    else
+    {
+      //Render 404 if the book at :id is not in the database
+      res.status(404);
+      res.json({ "message": "Course not found for ID " + req.params.id});
+    }
   })
   .catch((err) => {
     next(new Error(err));
   });
-
-    
 });
 
 //COURSE ROUTES
@@ -241,6 +246,8 @@ app.get('/api/courses/:id', (req, res, next) => {
 app.post('/api/courses', authenticateUser, (req, res, next) => {
   const course = req.body;
 
+  //replace middleware input validation with Sequelize validators
+  /*
   const errors = [];
 
   if (!course.title) {
@@ -253,29 +260,41 @@ app.post('/api/courses', authenticateUser, (req, res, next) => {
   if (errors.length != 0)
   {
     res.status(400);
-    res.json(errors);
+     res.json({"messages" : errors});
   }
   else
   {
+    */
+
     //create the course
     //set HTTP header to the URI for the course
     const Course = app.get('models').Course;
 
-    course.userId = req.currentUser.id;
+      course.userId = req.currentUser.id;
 
-    Course.create(course)
-    .then((course) => {
-      const fullUrl = req.protocol + '://' + req.get('host') + "/api/course/" + course.id;
-      res.set('Location', fullUrl);
-    })
-    .then(() => {
-    res.status(201);
-    res.send();
-  })
-  .catch((err) => {
-    next(new Error(err));
-  });
-  }
+      Course.create(course)
+      .then((course) => {
+        const fullUrl = req.protocol + '://' + req.get('host') + "/api/course/" + course.id;
+        res.set('Location', fullUrl);
+      })
+      .then(() => {
+        res.status(201);
+        res.send();
+      })
+      .catch((err) => {
+        if (err.name === "SequelizeValidationError") {
+          res.status(400);
+          res.json({ "name": err.name, "message": err.errors[0].message, "type": err.errors[0].type});
+        }
+        else
+        {
+          throw err;
+        }
+      })
+      .catch((err) => {
+        next(new Error(err));
+      });
+  //}
 });
 
 //COURSE ROUTES
@@ -323,6 +342,16 @@ app.put('/api/courses/:id', authenticateUser, (req, res, next) => {
             .then(() => {
               res.status(204);
               res.send();
+            })
+            .catch((err) => {
+              if (err.name === "SequelizeValidationError") {
+                res.status(400);
+                res.json({ "name": err.name, "message": err.errors[0].message, "type": err.errors[0].type});
+              }
+              else
+              {
+                throw err;
+              }
             })
             .catch((err) => {
               next(new Error(err));
@@ -386,23 +415,25 @@ app.delete('/api/courses/:id', authenticateUser, (req, res, next) => {
 
   // setup a friendly greeting for the root route
 app.get('/', (req, res) => {
-    const sql = new Sequelize({
-      dialect: 'sqlite',
-      storage: 'fsjstd-restapi.db'
-    });
-
-const test = sql.authenticate()
-.then(function () {
-    console.log("CONNECTED! ");
-})
-.catch(function (err) {
-    console.log("FAILED");
-})
-.done(); 
 res.json({
   message: 'Welcome to the REST API project!',
 });
 });
+
+//Test database connection on startup
+const sql = new Sequelize({
+  dialect: 'sqlite',
+  storage: 'fsjstd-restapi.db'
+});
+
+const test = sql.authenticate()
+.then(function () {
+console.log("CONNECTED! ");
+})
+.catch(function (err) {
+console.log("FAILED");
+})
+.done(); 
 
 // send 404 if no other route matched
 app.use((req, res, next) => {
