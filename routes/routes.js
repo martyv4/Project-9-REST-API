@@ -57,7 +57,10 @@ const authenticateUser = (req, res, next) => {
 
     //const user = User.find(u => u.emailAddress === credentials.emailAddress);
     const user = User.findOne({
-      where: {emailAddress: credentials.name}
+      where: {emailAddress: credentials.name},
+      //DO NOT reduce the query: we need the User.password later
+      //delete it when necessary, such as /api/users
+      //attributes: attributesUser,
     })
     .then((user) => {
 
@@ -102,7 +105,17 @@ const authenticateUser = (req, res, next) => {
   //Authentication
 app.get('/api/users', authenticateUser, (req, res, next) => {
     res.status(200);
-    res.json(req.currentUser);
+
+    //convert User model object to JSON
+    const jsonResponse = req.currentUser.toJSON();
+
+    //delete three attributes to hide from user
+    delete jsonResponse["password"];
+    delete jsonResponse["createdAt"];
+    delete jsonResponse["updatedAt"];
+  
+    //return the reduced JSON to the client
+    res.json(jsonResponse);
 });
 
 //USER ROUTES
