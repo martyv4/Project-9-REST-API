@@ -107,9 +107,11 @@ app.get('/api/users', authenticateUser, (req, res, next) => {
     res.status(200);
 
     //convert User model object to JSON
+    //https://www.w3schools.com/jsref/jsref_tojson.asp
     const jsonResponse = req.currentUser.toJSON();
 
     //delete three attributes to hide from user
+    //https://stackoverflow.com/questions/5310304/remove-json-element
     delete jsonResponse["password"];
     delete jsonResponse["createdAt"];
     delete jsonResponse["updatedAt"];
